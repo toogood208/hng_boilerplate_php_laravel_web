@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\Auth;
 
+use App\Helpers\OtpHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreUserRequest;
 use Illuminate\Http\Request;
@@ -41,16 +42,16 @@ class AuthController extends Controller
      */
     public function store(Request $request)
     {
-         // Validate the request data
+        // Validate the request data
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'email' => 'required|string|email:rfc|max:255|unique:users',
             'password' => ['required', 'string', Password::min(8)
-            ->letters()
-            ->mixedCase()
-            ->numbers()
-            ->symbols()
-            ->uncompromised()],
+                ->letters()
+                ->mixedCase()
+                ->numbers()
+                ->symbols()
+                ->uncompromised()],
         ]);
 
         // Check if validation fails
@@ -67,6 +68,7 @@ class AuthController extends Controller
                 'email' => $request->email,
                 'password' => Hash::make($request->password),
             ]);
+            return OtpHelper::requestOtp($user->id, 'auth_verification', null, $user->email);
 
             // Generate JWT token
             $token = JWTAuth::fromUser($user);
@@ -75,7 +77,7 @@ class AuthController extends Controller
             $data = [
                 'accessToken' => $token,
                 'user' => $user,
-            ]; 
+            ];
             return $this->apiResponse('Registration successful', Response::HTTP_CREATED, $data);
         } catch (\Exception $e) {
             DB::rollBack();
